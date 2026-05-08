@@ -1,6 +1,7 @@
 name: light-intensity-monitoring-system
 
 services:
+
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
@@ -12,3 +13,48 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
+
+  generator:
+    build: .
+    container_name: generator
+
+    command: npm run generator
+
+    depends_on:
+      - rabbitmq
+
+    environment:
+      RABBITMQ_URL: amqp://rabbitmq
+      LIGHT_INTENSITY_QUEUE: lightIntensityQueue
+      GENERATION_INTERVAL_MS: 1000
+      MIN_LUX: 0
+      MAX_LUX: 2000
+
+  processor:
+    build: .
+    container_name: processor
+
+    command: npm run processor
+
+    depends_on:
+      - rabbitmq
+
+    environment:
+      RABBITMQ_URL: amqp://rabbitmq
+      LIGHT_INTENSITY_QUEUE: lightIntensityQueue
+      LIGHT_ALERT_QUEUE: lightAlertQueue
+      LOW_LIGHT_THRESHOLD: 100
+      REQUIRED_CONSECUTIVE_LOW_READINGS: 3
+
+  reporter:
+    build: .
+    container_name: reporter
+
+    command: npm run reporter
+
+    depends_on:
+      - rabbitmq
+
+    environment:
+      RABBITMQ_URL: amqp://rabbitmq
+      LIGHT_ALERT_QUEUE: lightAlertQueue
