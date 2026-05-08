@@ -1,5 +1,5 @@
 import "dotenv/config"
-import amqp from "amqplib"
+import { connectRabbitMQ } from "../shared/connectRabbitMQ.ts"
 
 const RABBITMQ_URL =
     process.env.RABBITMQ_URL || "amqp://localhost"
@@ -16,7 +16,7 @@ async function startReporter(): Promise<void> {
     try {
         console.log("Connecting to RabbitMQ...")
 
-        const connection = await amqp.connect(RABBITMQ_URL)
+        const connection = await connectRabbitMQ(RABBITMQ_URL)
 
         const channel = await connection.createChannel()
 

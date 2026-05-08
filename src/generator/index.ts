@@ -1,5 +1,5 @@
 import "dotenv/config"
-import amqp from "amqplib"
+import { connectRabbitMQ } from "../shared/connectRabbitMQ.ts"
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || "amqp://localhost"
 const LIGHT_INTENSITY_QUEUE = process.env.LIGHT_INTENSITY_QUEUE || "lightIntensityQueue"
@@ -16,9 +16,8 @@ async function startGenerator(): Promise<void> {
     try {
         console.log("Connecting to RabbitMQ...")
 
-        const connection = await amqp.connect(RABBITMQ_URL)
+        const connection = await connectRabbitMQ(RABBITMQ_URL) 
         const channel = await connection.createChannel()
-
         await channel.assertQueue(LIGHT_INTENSITY_QUEUE, {
             durable: true
         })
