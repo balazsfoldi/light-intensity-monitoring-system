@@ -4,8 +4,8 @@
   "description": "A Dockerized RabbitMQ-based distributed system for monitoring indoor light intensity values and generating alerts when low light conditions are detected.",
   "main": "index.js",
   "scripts": {
-    "generator": "ts-node src/generator/index.ts"
-  },
+    "generator": "ts-node --esm src/generator/index.ts"
+ },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/balazsfoldi/light-intensity-monitoring-system.git"
@@ -13,7 +13,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/balazsfoldi/light-intensity-monitoring-system/issues"
   },
