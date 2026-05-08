@@ -1,7 +1,11 @@
+import "dotenv/config"
 import amqp from "amqplib"
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || "amqp://localhost"
-const LIGHT_INTENSITY_QUEUE = "lightIntensityQueue"
+const LIGHT_INTENSITY_QUEUE = process.env.LIGHT_INTENSITY_QUEUE || "lightIntensityQueue"
+const GENERATION_INTERVAL_MS = Number(process.env.GENERATION_INTERVAL_MS) || 500
+const MIN_LUX = Number(process.env.MIN_LUX) || 0
+const MAX_LUX = Number(process.env.MAX_LUX) || 2000
 
 interface LightIntensityMessage {
     lux: number
@@ -24,7 +28,9 @@ async function startGenerator(): Promise<void> {
 
         setInterval(() => {
             const message: LightIntensityMessage = {
-                lux: Math.floor(Math.random() * 2001),
+                lux: Math.floor(
+                    Math.random() * (MAX_LUX - MIN_LUX + 1)
+                ) + MIN_LUX,
                 timestamp: new Date().toISOString()
             }
 
@@ -39,7 +45,7 @@ async function startGenerator(): Promise<void> {
             console.log(
                 `Generated light intensity: ${message.lux} lux`
             )
-        }, 3000)
+        }, GENERATION_INTERVAL_MS)
 
     } catch (error) {
         console.error("Generator error:", error)
