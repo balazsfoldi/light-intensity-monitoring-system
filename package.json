@@ -4,9 +4,7 @@
   "description": "A Dockerized RabbitMQ-based distributed system for monitoring indoor light intensity values and generating alerts when low light conditions are detected.",
   "main": "index.js",
   "scripts": {
-    "dev": "ts-node src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js"
+    "generator": "ts-node src/generator/index.ts"
   },
   "repository": {
     "type": "git",
