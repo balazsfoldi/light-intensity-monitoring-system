@@ -1,14 +1,16 @@
 # Light Intensity Monitoring System
 
-A Dockerized RabbitMQ-based distributed system for monitoring indoor light intensity values and generating alerts when low light conditions are detected.
+A Dockerized distributed system based on RabbitMQ for monitoring indoor light intensity values and generating alerts when low light conditions are detected.
 
 ## Overview
 
-The system consists of three independent components communicating through RabbitMQ queues:
+The application consists of three independent services running in separate Docker containers and communicating asynchronously through RabbitMQ queues.
+
+### Components
 
 1. **Light Intensity Generator**
     - Generates random light intensity values between 0 and 2000 lux every 3 seconds
-    - Sends the generated values to the `lightIntensityQueue`
+    - Sends generated measurements to the `lightIntensityQueue`
 
 2. **Light Intensity Processor**
     - Consumes messages from the `lightIntensityQueue`
@@ -19,7 +21,7 @@ The system consists of three independent components communicating through Rabbit
     - Consumes alert messages from the `lightAlertQueue`
     - Prints alerts to the console
 
-## Architecture
+## System Architecture
 
 ```text
 +---------------------------+
@@ -27,10 +29,9 @@ The system consists of three independent components communicating through Rabbit
 +---------------------------+
               |
               v
-     +------------------+
-     | lightIntensity   |
-     |      Queue       |
-     +------------------+
+     +----------------------+
+     | lightIntensityQueue  |
+     +----------------------+
               |
               v
 +----------------------------+
@@ -38,31 +39,40 @@ The system consists of three independent components communicating through Rabbit
 +----------------------------+
               |
               v
-     +------------------+
-     | lightAlertQueue  |
-     +------------------+
+     +----------------------+
+     |   lightAlertQueue    |
+     +----------------------+
               |
               v
-+--------------------------+
-| Alert Reporting Client   |
-+--------------------------+
++---------------------------+
+| Alert Reporting Client    |
++---------------------------+
 ```
+
+## How It Works
+
+1. The generator service periodically creates random lux measurements
+2. The processor service consumes the measurements from RabbitMQ
+3. The processor tracks consecutive low light readings
+4. If 3 consecutive readings are below 100 lux, an alert is generated
+5. The reporter service consumes and displays alert messages
 
 ## Technologies
 
 - Node.js
 - TypeScript
 - RabbitMQ
+- Docker
 - Docker Compose
 
 ## Features
 
 - RabbitMQ point-to-point messaging
 - Distributed service architecture
-- Dockerized environment
+- Asynchronous queue-based communication
 - Automatic low light detection
 - Alert generation and reporting
-- Queue-based asynchronous communication
+- Containerized deployment with Docker Compose
 
 ## Queue Structure
 
@@ -96,10 +106,15 @@ Example message:
 ```text
 .
 ├── docker-compose.yml
-├── generator/
-├── processor/
-├── reporter/
-└── README.md
+├── Dockerfile
+├── package.json
+├── tsconfig.json
+├── README.md
+└── src
+    ├── generator
+    ├── processor
+    ├── reporter
+    └── shared
 ```
 
 ## Running the Application
@@ -117,7 +132,7 @@ docker compose up --build
 
 ## Expected Output
 
-### Generator
+### Generator Service
 
 ```text
 Generated light intensity: 320 lux
@@ -126,7 +141,7 @@ Generated light intensity: 64 lux
 Generated light intensity: 52 lux
 ```
 
-### Reporter
+### Alert Reporter Service
 
 ```text
 Low light alert: 3 consecutive readings below 100 lux.
@@ -138,7 +153,7 @@ The system can be tested by verifying the following:
 
 - Light intensity messages are successfully sent to RabbitMQ
 - The processor correctly detects low light conditions
-- Alert messages are forwarded to the alert queue
+- Alert messages are forwarded to the `lightAlertQueue`
 - The reporter successfully consumes and displays alerts
 
 ## RabbitMQ Management Interface
@@ -158,4 +173,4 @@ Password: guest
 
 ## Author
 
-University integration systems assignment project.
+University project for the Information Systems Integration course.
