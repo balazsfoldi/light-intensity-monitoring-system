@@ -1,63 +1,27 @@
 # Light Intensity Monitoring System
 
-A Dockerized RabbitMQ-based distributed system for monitoring indoor light intensity values and generating alerts when low light conditions are detected.
+A Dockerized distributed system based on RabbitMQ for monitoring indoor light intensity values and generating alerts when low light conditions are detected.
 
 ## Overview
 
-The system consists of three independent Node.js/TypeScript services communicating through RabbitMQ queues.
+The application consists of three independent services running in separate Docker containers and communicating asynchronously through RabbitMQ queues.
 
-The goal of the application is to simulate light intensity measurements, process the generated values, and report an alert when several consecutive low light readings are detected.
+### Components
 
-## Components
+1. **Light Intensity Generator**
+    - Generates random light intensity values between 0 and 2000 lux every 3 seconds
+    - Sends generated measurements to the `lightIntensityQueue`
 
-### 1. Light Intensity Generator
+2. **Light Intensity Processor**
+    - Consumes messages from the `lightIntensityQueue`
+    - Detects low light conditions
+    - If 3 consecutive readings are below 100 lux, sends an alert message to the `lightAlertQueue`
 
-The generator service periodically creates random light intensity values.
+3. **Alert Reporting Client**
+    - Consumes alert messages from the `lightAlertQueue`
+    - Prints alerts to the console
 
-* Generates random lux values between `MIN_LUX` and `MAX_LUX`
-* Adds a timestamp to each measurement
-* Sends the generated message to the `lightIntensityQueue`
-* The generation interval can be configured with `GENERATION_INTERVAL_MS`
-
-Example message:
-
-```json
-{
-  "lux": 85,
-  "timestamp": "2026-05-08T14:30:00.000Z"
-}
-```
-
-### 2. Light Intensity Processor
-
-The processor service consumes messages from the `lightIntensityQueue`.
-
-It checks whether the received lux value is below the configured low light threshold.
-
-* Consumes light intensity messages
-* Compares the lux value with `LOW_LIGHT_THRESHOLD`
-* Counts consecutive low light readings
-* Sends an alert to `lightAlertQueue` if the number of consecutive low readings reaches `REQUIRED_CONSECUTIVE_LOW_READINGS`
-* Resets the counter when a normal reading is received
-
-Example alert message:
-
-```json
-{
-  "message": "Low light alert: 3 consecutive readings below 100 lux.",
-  "timestamp": "2026-05-08T14:30:05.000Z"
-}
-```
-
-### 3. Alert Reporting Client
-
-The reporter service consumes alert messages from the `lightAlertQueue`.
-
-* Listens for alert messages
-* Parses the received JSON message
-* Prints the alert to the console
-
-## Architecture
+## System Architecture
 
 ```text
 +---------------------------+
@@ -75,34 +39,40 @@ The reporter service consumes alert messages from the `lightAlertQueue`.
 +----------------------------+
               |
               v
-     +------------------+
-     | lightAlertQueue  |
-     +------------------+
+     +----------------------+
+     |   lightAlertQueue    |
+     +----------------------+
               |
               v
-+--------------------------+
-| Alert Reporting Client   |
-+--------------------------+
++---------------------------+
+| Alert Reporting Client    |
++---------------------------+
 ```
+
+## How It Works
+
+1. The generator service periodically creates random lux measurements
+2. The processor service consumes the measurements from RabbitMQ
+3. The processor tracks consecutive low light readings
+4. If 3 consecutive readings are below 100 lux, an alert is generated
+5. The reporter service consumes and displays alert messages
 
 ## Technologies
 
-* Node.js
-* TypeScript
-* RabbitMQ
-* Docker
-* Docker Compose
+- Node.js
+- TypeScript
+- RabbitMQ
+- Docker
+- Docker Compose
 
 ## Features
 
-* RabbitMQ-based asynchronous communication
-* Distributed service architecture
-* Dockerized environment
-* Configurable light intensity generation
-* Configurable low light threshold
-* Consecutive low light detection
-* Alert generation and reporting
-* Automatic RabbitMQ reconnect retry on startup
+- RabbitMQ point-to-point messaging
+- Distributed service architecture
+- Asynchronous queue-based communication
+- Automatic low light detection
+- Alert generation and reporting
+- Containerized deployment with Docker Compose
 
 ## Queue Structure
 
@@ -132,39 +102,21 @@ Example:
 }
 ```
 
-## Configuration
+## Project Structure
 
-The application can be configured through environment variables.
-
-### Common
-
-| Variable       | Description             | Default            |
-| -------------- | ----------------------- | ------------------ |
-| `RABBITMQ_URL` | RabbitMQ connection URL | `amqp://localhost` |
-
-### Generator
-
-| Variable                 | Description                                  | Default               |
-| ------------------------ | -------------------------------------------- | --------------------- |
-| `LIGHT_INTENSITY_QUEUE`  | Queue for generated light intensity messages | `lightIntensityQueue` |
-| `GENERATION_INTERVAL_MS` | Message generation interval in milliseconds  | `500`                 |
-| `MIN_LUX`                | Minimum generated lux value                  | `0`                   |
-| `MAX_LUX`                | Maximum generated lux value                  | `2000`                |
-
-### Processor
-
-| Variable                            | Description                                              | Default               |
-| ----------------------------------- | -------------------------------------------------------- | --------------------- |
-| `LIGHT_INTENSITY_QUEUE`             | Queue for incoming light intensity messages              | `lightIntensityQueue` |
-| `LIGHT_ALERT_QUEUE`                 | Queue for generated alert messages                       | `lightAlertQueue`     |
-| `LOW_LIGHT_THRESHOLD`               | Threshold below which a reading is considered low        | `100`                 |
-| `REQUIRED_CONSECUTIVE_LOW_READINGS` | Number of consecutive low readings required for an alert | `3`                   |
-
-### Reporter
-
-| Variable            | Description              | Default           |
-| ------------------- | ------------------------ | ----------------- |
-| `LIGHT_ALERT_QUEUE` | Queue for alert messages | `lightAlertQueue` |
+```text
+.
+├── docker-compose.yml
+├── Dockerfile
+├── package.json
+├── tsconfig.json
+├── README.md
+└── src
+    ├── generator
+    ├── processor
+    ├── reporter
+    └── shared
+```
 
 ## Running the Application
 
@@ -188,7 +140,7 @@ This command starts:
 
 ## Expected Output
 
-### Generator
+### Generator Service
 
 ```text
 Generator service started
@@ -199,28 +151,22 @@ Generated light intensity: 64 lux
 Generated light intensity: 52 lux
 ```
 
-### Processor
-
-```text
-Processor service started
-Received light intensity: 78 lux
-Low light detected (1/3)
-Received light intensity: 64 lux
-Low light detected (2/3)
-Received light intensity: 52 lux
-Low light detected (3/3)
-Alert message sent
-```
-
-### Reporter
+### Alert Reporter Service
 
 ```text
 Reporter service started
 ALERT RECEIVED
 Low light alert: 3 consecutive readings below 100 lux.
-Timestamp: 2026-05-08T14:30:05.000Z
---------------------------------
 ```
+
+## Testing
+
+The system can be tested by verifying the following:
+
+- Light intensity messages are successfully sent to RabbitMQ
+- The processor correctly detects low light conditions
+- Alert messages are forwarded to the `lightAlertQueue`
+- The reporter successfully consumes and displays alerts
 
 ## RabbitMQ Management Interface
 
@@ -306,4 +252,4 @@ This makes alerts appear more frequently.
 
 ## Author
 
-University integration systems assignment project.
+University project for the Information Systems Integration course.

@@ -1,60 +1,100 @@
+# Docker Compose project name
 name: light-intensity-monitoring-system
 
 services:
 
+  # RabbitMQ message broker
   rabbitmq:
+    # Official RabbitMQ image with management UI
     image: rabbitmq:3-management
+
     container_name: rabbitmq
 
+    # Exposed ports
     ports:
+      # AMQP protocol
       - "5672:5672"
+
+      # RabbitMQ Management UI
       - "15672:15672"
 
+    # Default credentials
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
 
+  # Generates random light intensity values
   generator:
+    # Build image from local Dockerfile
     build: .
+
     container_name: generator
 
+    # Start the generator component
     command: npm run generator
 
+    # RabbitMQ must start before this service
     depends_on:
       - rabbitmq
 
+    # Generator configuration
     environment:
+      # RabbitMQ hostname inside Docker network
       RABBITMQ_URL: amqp://rabbitmq
+
+      # Queue receiving light intensity measurements
       LIGHT_INTENSITY_QUEUE: lightIntensityQueue
+
+      # Generate one value every second
       GENERATION_INTERVAL_MS: 1000
+
+      # Minimum and maximum lux values
       MIN_LUX: 0
       MAX_LUX: 2000
 
+  # Processes light intensity values
   processor:
     build: .
+
     container_name: processor
 
+    # Start processor component
     command: npm run processor
 
     depends_on:
       - rabbitmq
 
+    # Processor configuration
     environment:
       RABBITMQ_URL: amqp://rabbitmq
+
+      # Queue containing sensor measurements
       LIGHT_INTENSITY_QUEUE: lightIntensityQueue
+
+      # Queue used for alert messages
       LIGHT_ALERT_QUEUE: lightAlertQueue
+
+      # Threshold below which light is considered too low
       LOW_LIGHT_THRESHOLD: 100
+
+      # Number of consecutive low readings required
       REQUIRED_CONSECUTIVE_LOW_READINGS: 3
 
+  # Displays alerts to the user
   reporter:
     build: .
+
     container_name: reporter
 
+    # Start reporter component
     command: npm run reporter
 
     depends_on:
       - rabbitmq
 
+    # Reporter configuration
     environment:
       RABBITMQ_URL: amqp://rabbitmq
+
+      # Queue containing alert messages
       LIGHT_ALERT_QUEUE: lightAlertQueue
