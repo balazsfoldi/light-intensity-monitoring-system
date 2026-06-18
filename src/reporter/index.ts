@@ -1,9 +1,15 @@
 import "dotenv/config"
 import { connectRabbitMQ } from "../shared/connectRabbitMQ.ts"
 
+/**
+ * RabbitMQ connection URL.
+ */
 const RABBITMQ_URL =
     process.env.RABBITMQ_URL || "amqp://localhost"
 
+/**
+ * Queue containing alert messages.
+ */
 const LIGHT_ALERT_QUEUE =
     process.env.LIGHT_ALERT_QUEUE || "lightAlertQueue"
 
@@ -14,34 +20,64 @@ interface AlertMessage {
 
 async function startReporter(): Promise<void> {
     try {
-        console.log("Connecting to RabbitMQ...")
 
-        const connection = await connectRabbitMQ(RABBITMQ_URL)
+        /**
+         * Establish connection to RabbitMQ.
+         */
+        const connection =
+            await connectRabbitMQ(RABBITMQ_URL)
 
-        const channel = await connection.createChannel()
+        /**
+         * Create a communication channel.
+         */
+        const channel =
+            await connection.createChannel()
 
-        await channel.assertQueue(LIGHT_ALERT_QUEUE, {
-            durable: true
-        })
+        /**
+         * Create the queue if it does not exist.
+         */
+        await channel.assertQueue(
+            LIGHT_ALERT_QUEUE,
+            {
+                durable: true
+            }
+        )
 
         console.log("Reporter service started")
 
-        channel.consume(LIGHT_ALERT_QUEUE, (message) => {
-            if (!message) {
-                return
+        /**
+         * Listen for alert messages.
+         */
+        channel.consume(
+            LIGHT_ALERT_QUEUE,
+            (message) => {
+
+                if (!message) {
+                    return
+                }
+
+                /**
+                 * Convert the received buffer to JSON.
+                 */
+                const content = JSON.parse(
+                    message.content.toString()
+                ) as AlertMessage
+
+                console.log("ALERT RECEIVED")
+                console.log(content.message)
+                console.log(
+                    `Timestamp: ${content.timestamp}`
+                )
+                console.log(
+                    "--------------------------------"
+                )
+
+                /**
+                 * Acknowledge successful processing.
+                 */
+                channel.ack(message)
             }
-
-            const content = JSON.parse(
-                message.content.toString()
-            ) as AlertMessage
-
-            console.log("ALERT RECEIVED")
-            console.log(content.message)
-            console.log(`Timestamp: ${content.timestamp}`)
-            console.log("--------------------------------")
-
-            channel.ack(message)
-        })
+        )
 
     } catch (error) {
         console.error("Reporter error:", error)

@@ -6,7 +6,8 @@
   "scripts": {
     "generator": "ts-node --esm src/generator/index.ts",
     "processor": "ts-node --esm src/processor/index.ts",
-    "reporter": "ts-node --esm src/reporter/index.ts"
+    "reporter": "ts-node --esm src/reporter/index.ts",
+    "start": "docker compose up --build"
   },
   "repository": {
     "type": "git",

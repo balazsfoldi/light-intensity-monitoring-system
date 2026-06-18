@@ -1,9 +1,27 @@
 import "dotenv/config"
 import { connectRabbitMQ } from "../shared/connectRabbitMQ.ts"
 
-const RABBITMQ_URL = process.env.RABBITMQ_URL || "amqp://localhost"
-const LIGHT_INTENSITY_QUEUE = process.env.LIGHT_INTENSITY_QUEUE || "lightIntensityQueue"
-const GENERATION_INTERVAL_MS = Number(process.env.GENERATION_INTERVAL_MS) || 500
+/**
+ * RabbitMQ connection URL.
+ */
+const RABBITMQ_URL =
+    process.env.RABBITMQ_URL || "amqp://localhost"
+
+/**
+ * Queue that stores light intensity measurements.
+ */
+const LIGHT_INTENSITY_QUEUE =
+    process.env.LIGHT_INTENSITY_QUEUE || "lightIntensityQueue"
+
+/**
+ * Generation interval in milliseconds.
+ */
+const GENERATION_INTERVAL_MS =
+    Number(process.env.GENERATION_INTERVAL_MS) || 500
+
+/**
+ * Minimum and maximum generated lux values.
+ */
 const MIN_LUX = Number(process.env.MIN_LUX) || 0
 const MAX_LUX = Number(process.env.MAX_LUX) || 2000
 
@@ -14,25 +32,49 @@ interface LightIntensityMessage {
 
 async function startGenerator(): Promise<void> {
     try {
-        console.log("Connecting to RabbitMQ...")
+        const connection =
+            await connectRabbitMQ(RABBITMQ_URL)
 
-        const connection = await connectRabbitMQ(RABBITMQ_URL) 
         const channel = await connection.createChannel()
-        await channel.assertQueue(LIGHT_INTENSITY_QUEUE, {
-            durable: true
-        })
+
+        /**
+         * Creates the queue if it does not already exist.
+         */
+        await channel.assertQueue(
+            LIGHT_INTENSITY_QUEUE,
+            {
+                durable: true
+            }
+        )
 
         console.log("Generator service started")
-        console.log(`Sending messages to queue: ${LIGHT_INTENSITY_QUEUE}`)
+        console.log(
+            `Sending messages to queue: ${LIGHT_INTENSITY_QUEUE}`
+        )
 
+        /**
+         * Periodically generates random measurements.
+         */
         setInterval(() => {
+
             const message: LightIntensityMessage = {
-                lux: Math.floor(
-                    Math.random() * (MAX_LUX - MIN_LUX + 1)
-                ) + MIN_LUX,
-                timestamp: new Date().toISOString()
+
+                /**
+                 * Generate a random lux value between MIN_LUX and MAX_LUX.
+                 */
+                lux:
+                    Math.floor(
+                        Math.random() *
+                        (MAX_LUX - MIN_LUX + 1)
+                    ) + MIN_LUX,
+
+                timestamp:
+                    new Date().toISOString()
             }
 
+            /**
+             * Send the measurement to RabbitMQ.
+             */
             channel.sendToQueue(
                 LIGHT_INTENSITY_QUEUE,
                 Buffer.from(JSON.stringify(message)),
@@ -44,6 +86,7 @@ async function startGenerator(): Promise<void> {
             console.log(
                 `Generated light intensity: ${message.lux} lux`
             )
+
         }, GENERATION_INTERVAL_MS)
 
     } catch (error) {
